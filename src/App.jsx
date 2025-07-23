@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Container from '@mui/material/Container';
@@ -56,7 +56,6 @@ const steps = ['Informazioni personali', 'Livello di attività', 'Personalizza m
 
 function App() {
   const [activeStep, setActiveStep] = useState(0);
-  const containerRef = useRef(null);
   const [formData, setFormData] = useState({
     age: '',
     gender: 'male',
@@ -64,8 +63,10 @@ function App() {
     weight: '',
     bodyFat: '',
     workActivity: 'sedentary',
-    trainingLevel: 'none',
-    otherSports: 'none',
+    trainingLevel: 'light',
+    trainingDays: 0,
+    otherSports: 'light',
+    otherSportsDays: 0,
     dailySteps: '',
   });
   const [macroSettings, setMacroSettings] = useState({
@@ -79,6 +80,11 @@ function App() {
   });
   const [results, setResults] = useState(null);
 
+  useEffect(() => {
+    // Per debug: verifica i valori di formData
+    console.log("Form data aggiornato:", formData);
+  }, [formData]);
+
   const handleNext = () => {
     if (activeStep === 1) {
       const preCalculation = calculatePreResults();
@@ -90,19 +96,12 @@ function App() {
     }
     
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    
-    // Scroll to top of container when changing steps
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
-    }
+    window.scrollTo(0, 0);
   };
 
   const handleBack = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
-    // Scroll to top of container when changing steps
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
-    }
+    window.scrollTo(0, 0);
   };
 
   const handleReset = () => {
@@ -114,8 +113,10 @@ function App() {
       weight: '',
       bodyFat: '',
       workActivity: 'sedentary',
-      trainingLevel: 'none',
-      otherSports: 'none',
+      trainingLevel: 'light',
+      trainingDays: 0,
+      otherSports: 'light',
+      otherSportsDays: 0,
       dailySteps: '',
     });
     setMacroSettings({
@@ -123,17 +124,30 @@ function App() {
       fatPerKg: 0.8,
     });
     setResults(null);
-    // Scroll to top of container when resetting
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
-    }
+    window.scrollTo(0, 0);
   };
 
   const handleFormChange = (field, value) => {
-    setFormData({
+    // Per i campi numerici, assicuriamoci che siano numeri
+    if (['trainingDays', 'otherSportsDays'].includes(field)) {
+      value = Number(value);
+    }
+    
+    let updatedFormData = {
       ...formData,
       [field]: value,
-    });
+    };
+    
+    // Logica aggiuntiva per gestire dipendenze tra campi
+    if (field === 'trainingDays' && value === 0) {
+      updatedFormData.trainingLevel = 'light';
+    }
+    
+    if (field === 'otherSportsDays' && value === 0) {
+      updatedFormData.otherSports = 'light';
+    }
+    
+    setFormData(updatedFormData);
   };
 
   const handleMacroSettingsChange = (field, value) => {
@@ -143,73 +157,122 @@ function App() {
     });
   };
 
-  const calculatePreResults = () => {
-    // Calcolo del BMR (Basal Metabolic Rate)
-    let bmr;
-    let leanBodyMass;
-    
-    // Calcolo della massa magra
-    if (formData.bodyFat && formData.bodyFat !== '') {
-      const bodyFatPercentage = parseFloat(formData.bodyFat) / 100;
-      leanBodyMass = parseFloat(formData.weight) * (1 - bodyFatPercentage);
-      bmr = 370 + (21.6 * leanBodyMass);
-    } 
-    else {
-      // Stima approssimativa della massa magra in base al sesso
-      const estimatedBodyFat = formData.gender === 'male' ? 0.15 : 0.25; // 15% uomini, 25% donne (media)
-      leanBodyMass = parseFloat(formData.weight) * (1 - estimatedBodyFat);
-      
-      // Formula di Harris-Benedict
-      if (formData.gender === 'male') {
-        bmr = 88.362 + (13.397 * parseFloat(formData.weight)) + (4.799 * parseFloat(formData.height)) - (5.677 * parseFloat(formData.age));
-      } else {
-        bmr = 447.593 + (9.247 * parseFloat(formData.weight)) + (3.098 * parseFloat(formData.height)) - (4.330 * parseFloat(formData.age));
-      }
-    }
+  // Nel file App.jsx, modifichiamo la funzione calculatePreResults per evitare NaN
 
-    // Fattori di attività lavorativa
-    const workFactors = {
-      sedentary: 1.2,
-      light: 1.375,
-      moderate: 1.55,
-      heavy: 1.725,
-      veryHeavy: 1.9,
-    };
-
-    // Fattori di allenamento
-    const trainingFactors = {
-      none: 0,
-      light: 200,
-      moderate: 300,
-      intense: 500,
-      veryIntense: 700,
-    };
-
-    // Fattori per altri sport
-    const sportsFactors = {
-      none: 0,
-      light: 150,
-      moderate: 250,
-      intense: 400,
-      veryIntense: 600,
-    };
-
-    // Calcolo calorie per passi (approssimazione: 0.04 calorie per passo per un adulto di peso medio)
-    const stepsFactor = parseFloat(formData.dailySteps || 0) * 0.04;
-    
-    // Calcolo TDEE combinando tutti i fattori
-    const workTDEE = bmr * workFactors[formData.workActivity];
-    const tdee = workTDEE + trainingFactors[formData.trainingLevel] + sportsFactors[formData.otherSports] + stepsFactor;
-    
-    return {
-      bmr: Math.round(bmr),
-      tdee: Math.round(tdee),
-      leanBodyMass: Math.round(leanBodyMass * 10) / 10, // Arrotonda a 1 decimale
-    };
+const calculatePreResults = () => {
+  // Estrai i dati necessari
+  const weight = parseFloat(formData.weight) || 0;
+  const height = parseFloat(formData.height) || 0;
+  const age = parseFloat(formData.age) || 0;
+  const bodyFat = formData.bodyFat ? parseFloat(formData.bodyFat) / 100 : null;
+  const gender = formData.gender;
+  
+  // Calcolo massa magra
+  let leanBodyMass;
+  if (bodyFat !== null) {
+    leanBodyMass = weight * (1 - bodyFat);
+  } else {
+    // Stima della massa magra se non viene fornita la percentuale di grasso
+    const estimatedBodyFat = gender === 'male' ? 0.15 : 0.25;
+    leanBodyMass = weight * (1 - estimatedBodyFat);
+  }
+  
+  // 1. Calcolo BMR con la formula ibrida con correzione massa grassa
+  // BMR = (10 × peso) + (6.25 × altezza) - (5 × età) + S - (12 × peso × %grasso)
+  const genderFactor = gender === 'male' ? 5 : -161;
+  
+  let bmr;
+  if (bodyFat !== null) {
+    // Formula con correzione massa grassa se disponibile
+    bmr = (10 * weight) + (6.25 * height) - (5 * age) + genderFactor - (12 * weight * bodyFat);
+  } else {
+    // Formula standard senza correzione massa grassa
+    bmr = (10 * weight) + (6.25 * height) - (5 * age) + genderFactor;
+  }
+  
+  // 2. Calcolo componenti del TDEE
+  
+  // 2.1 NEAT (Non-Exercise Activity Thermogenesis) - attività quotidiana non legata all'esercizio
+  let neat = 0;
+  
+  // Fattori di attività lavorativa per NEAT
+  const workNeatFactors = {
+    sedentary: bmr * 0.1,      // +10% del BMR
+    light: bmr * 0.2,          // +20% del BMR
+    moderate: bmr * 0.3,       // +30% del BMR
+    heavy: bmr * 0.4,          // +40% del BMR
+    veryHeavy: bmr * 0.5,      // +50% del BMR
   };
+  
+  neat += workNeatFactors[formData.workActivity] || 0;
+  
+  // Passi giornalieri (approssimazione: 0.03 calorie per passo per un adulto di peso medio)
+  const dailySteps = parseFloat(formData.dailySteps || 0);
+  const stepsFactor = dailySteps * 0.03;
+  neat += stepsFactor;
+  
+  // 2.2 EAT (Exercise Activity Thermogenesis) - attività fisica da esercizio
+  let eat = 0;
+  
+  // Allenamento in palestra
+  const trainingDailyFactors = {
+    light: 150,     // calorie bruciate per giorno di allenamento leggero
+    moderate: 250,  // calorie bruciate per giorno di allenamento moderato
+    intense: 350,   // calorie bruciate per giorno di allenamento intenso
+    veryIntense: 500 // calorie bruciate per giorno di allenamento molto intenso
+  };
+  
+  // Calcolo calorie settimanali da allenamento in palestra
+  const trainingDays = parseInt(formData.trainingDays || 0);
+  const trainingLevel = formData.trainingLevel || 'light';
+  const trainingCaloriesPerWeek = trainingDays * (trainingDailyFactors[trainingLevel] || 0);
+  
+  // Altri sport
+  const otherSportsDailyFactors = {
+    light: 150,     // calorie bruciate per giorno di sport leggero
+    moderate: 300,  // calorie bruciate per giorno di sport moderato
+    intense: 500,   // calorie bruciate per giorno di sport intenso
+    veryIntense: 700 // calorie bruciate per giorno di sport molto intenso
+  };
+  
+  // Calcolo calorie settimanali da altri sport
+  const otherSportsDays = parseInt(formData.otherSportsDays || 0);
+  const otherSportsLevel = formData.otherSports || 'light';
+  const otherSportsCaloriesPerWeek = otherSportsDays * (otherSportsDailyFactors[otherSportsLevel] || 0);
+  
+  // Converti calorie settimanali in giornaliere
+  eat = (trainingCaloriesPerWeek + otherSportsCaloriesPerWeek) / 7;
+  
+  // Calcolo iniziale del TDEE (senza TEF ancora)
+  const tdeeWithoutTef = bmr + neat + eat;
+  
+  // 2.3 TEF (Termogenesi da cibo) - 10% del TDEE
+  const tef = 0.1 * tdeeWithoutTef;
+  
+  // Calcolo finale del TDEE
+  const tdee = tdeeWithoutTef + tef;
+  
+  console.log("Calcolo dettagliato:", {
+    bmr,
+    neat,
+    eat,
+    tef,
+    tdee,
+    leanBodyMass
+  });
+  
+  return {
+    bmr: Math.round(bmr) || 0,
+    neat: Math.round(neat) || 0,
+    eat: Math.round(eat) || 0,
+    tef: Math.round(tef) || 0,
+    tdee: Math.round(tdee) || 0,
+    leanBodyMass: Math.round(leanBodyMass * 10) / 10 || 0, // Arrotonda a 1 decimale
+  };
+};
 
   const calculateFinalResults = () => {
-    const { tdee, leanBodyMass } = calculationData;
+    const { tdee, leanBodyMass, bmr, neat, eat, tef } = calculationData;
     
     // Calcolo macronutrienti basato sui grammi per kg di massa magra
     const proteins = leanBodyMass * macroSettings.proteinPerKg;
@@ -224,7 +287,10 @@ function App() {
     const carbs = remainingCalories / 4; // 4 calorie per grammo
     
     setResults({
-      bmr: calculationData.bmr,
+      bmr: bmr,
+      neat: neat,
+      eat: eat,
+      tef: tef,
       tdee: tdee,
       leanBodyMass: leanBodyMass,
       macros: {
@@ -272,134 +338,89 @@ function App() {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <Box 
-        sx={{ 
-          width: '100%',
-          height: '100%',
+  <ThemeProvider theme={darkTheme}>
+    <CssBaseline />
+    <Container maxWidth="md" sx={{ py: 2 }}>
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Box sx={{ textAlign: 'center', mb: 3 }}>
+          {/* Logo */}
+          <img 
+            src="./images/logo.png" 
+            alt="Logo" 
+            style={{ 
+              maxWidth: '150px', 
+              maxHeight: '150px',
+              objectFit: 'contain'
+            }} 
+          />
+          
+          <Typography variant="h4" component="h1" gutterBottom>
+            Calcolatore TDEE
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary" paragraph>
+            {steps[activeStep]}
+          </Typography>
+        </Box>
+
+        {/* Barra di progresso in alto */}
+        <Box sx={{ width: '100%', maxWidth: 600, mx: 'auto', mb: 4 }}>
+          <LinearProgress 
+            variant="determinate" 
+            value={(activeStep / (steps.length - 1)) * 100} 
+            sx={{ height: 10, borderRadius: 5 }} 
+          />
+        </Box>
+
+        {/* Contenuto principale */}
+        <Box sx={{ mx: 'auto', maxWidth: 600 }}>
+          {getStepContent(activeStep)}
+        </Box>
+
+        {/* Pulsanti di navigazione in fondo */}
+        <Box sx={{ 
+          mx: 'auto', 
+          maxWidth: 600, 
+          mt: 3,
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          bgcolor: 'background.default',
-          overflowX: 'hidden',
-          pt: { xs: 2, sm: 4 },
-          pb: { xs: 2, sm: 4 }
-        }}
-      >
-        <Container 
-          maxWidth="md" 
-          sx={{ 
-            height: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: '1 0 auto'
-          }}
-        >
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 3, 
-              width: '100%',
-              height: 'auto',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              {/* Logo */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                <img 
-                  src="/images/logo.png" 
-                  alt="Logo" 
-                  style={{ 
-                    maxWidth: '150px', 
-                    maxHeight: '150px',
-                    objectFit: 'contain'
-                  }} 
-                />
-              </Box>
-              
-              <Typography variant="h4" component="h1" gutterBottom>
-                Calcolatore TDEE
-              </Typography>
-              <Typography variant="subtitle1" color="text.secondary" paragraph>
-                {steps[activeStep]}
-              </Typography>
-            </Box>
-
-            {/* Custom Stepper alternative */}
-            <Box sx={{ width: '100%', maxWidth: 600, mx: 'auto', mb: 4 }}>
-              <LinearProgress 
-                variant="determinate" 
-                value={(activeStep / (steps.length - 1)) * 100} 
-                sx={{ height: 10, borderRadius: 5 }} 
-              />
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  mt: 1,
-                  '& .MuiButton-root': {
-                    minWidth: '100px'
-                  }
-                }}
-              >
-                <Button 
-                  size="small" 
-                  onClick={handleBack} 
-                  disabled={activeStep === 0}
-                  startIcon={<KeyboardArrowLeft />}
-                >
-                  Indietro
-                </Button>
-                <Button 
-                  size="small" 
-                  onClick={handleNext} 
-                  disabled={isNextDisabled() || activeStep === steps.length - 1}
-                  endIcon={<KeyboardArrowRight />}
-                >
-                  {activeStep === steps.length - 2 ? 'Calcola' : 'Avanti'}
-                </Button>
-              </Box>
-            </Box>
-
-            {/* Contenuto principale con scroll migliorato */}
-            <Box 
-              ref={containerRef}
-              sx={{ 
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                flexDirection: 'column',
-                alignItems: 'center',
-                position: 'relative'
-              }}
+          justifyContent: 'space-between'
+        }}>
+          {activeStep === steps.length - 1 ? (
+            <Button 
+              onClick={handleReset} 
+              variant="outlined" 
+              fullWidth
             >
-              <Box sx={{ width: '100%', maxWidth: '600px' }}>
-                {getStepContent(activeStep)}
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Box sx={{ width: '100%', maxWidth: '600px', display: 'flex', justifyContent: 'space-between' }}>
-                {activeStep === steps.length - 1 && (
-                  <Button 
-                    onClick={handleReset} 
-                    variant="outlined" 
-                    fullWidth
-                  >
-                    Ricomincia
-                  </Button>
-                )}
-              </Box>
-            </Box>
-          </Paper>
-        </Container>
-      </Box>
-    </ThemeProvider>
-  );
+              Ricomincia
+            </Button>
+          ) : (
+            <>
+              <Button 
+                size="large" 
+                onClick={handleBack} 
+                disabled={activeStep === 0}
+                startIcon={<KeyboardArrowLeft />}
+                variant="outlined"
+                sx={{ minWidth: '120px' }}
+              >
+                Indietro
+              </Button>
+              <Button 
+                size="large" 
+                onClick={handleNext} 
+                disabled={isNextDisabled()}
+                endIcon={<KeyboardArrowRight />}
+                variant="contained"
+                sx={{ minWidth: '120px' }}
+              >
+                {activeStep === steps.length - 2 ? 'Calcola' : 'Avanti'}
+              </Button>
+            </>
+          )}
+        </Box>
+      </Paper>
+    </Container>
+  </ThemeProvider>
+);
 }
 
 export default App;

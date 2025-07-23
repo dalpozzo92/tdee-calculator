@@ -81,7 +81,7 @@ const PersonalInfoForm = ({ formData, onChange }) => {
               endAdornment: (
                 <InputAdornment position="end">
                   <Tooltip 
-                    title="La percentuale di grasso corporeo permette un calcolo più preciso del metabolismo basale. Se non conosci questo valore, puoi lasciare il campo vuoto."
+                    title="La percentuale di grasso corporeo permette un calcolo più preciso del metabolismo basale. Se non conosci questo valore, puoi lasciare il campo vuoto. (valori predefiniti 15% per gli uomini, 25% per le donne)"
                     open={tooltipOpen}
                     onClose={() => setTooltipOpen(false)}
                     disableFocusListener

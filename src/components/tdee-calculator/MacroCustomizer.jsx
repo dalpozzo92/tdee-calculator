@@ -62,7 +62,7 @@ const MacroCustomizer = ({ macroSettings, onChange, leanBodyMass, tdee }) => {
       </Card>
       
       <Grid container spacing={4}>
-        <Grid size={{ xs: 12, md: 10 }}>
+        <Grid size={{ xs: 12}}>
           <Card sx={{ p: 2 }}>
             <Typography id="protein-slider" gutterBottom>
               Proteine: <strong>{macroSettings.proteinPerKg}g</strong> per kg di massa magra
@@ -108,7 +108,7 @@ const MacroCustomizer = ({ macroSettings, onChange, leanBodyMass, tdee }) => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 10 }}>
+        <Grid size={{ xs: 12}}>
           <Card sx={{ p: 2 }}>
             <Typography id="fat-slider" gutterBottom>
               Grassi: <strong>{macroSettings.fatPerKg}g</strong> per kg di massa magra
@@ -155,7 +155,7 @@ const MacroCustomizer = ({ macroSettings, onChange, leanBodyMass, tdee }) => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 10 }}>
+        <Grid size={{ xs: 12}}>
           <Card sx={{ p: 2, bgcolor: 'rgba(144, 202, 249, 0.08)' }}>
             <Typography gutterBottom>
               Carboidrati (calcolati automaticamente)
