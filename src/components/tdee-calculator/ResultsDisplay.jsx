@@ -788,9 +788,9 @@ const ResultsDisplay = ({ results }) => {
             Calorie e Macronutrienti per Obiettivo
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 3, textAlign: 'left' }}>
-//             Clicca su un obiettivo per vedere le calorie e i macronutrienti consigliati.
-//             Puoi anche modificare i grammi di proteine e grassi nella sezione precedente.
-//           </Typography>
+           Clicca su un obiettivo per vedere le calorie e i macronutrienti consigliati.
+           Puoi anche modificare i grammi di proteine e grassi nella sezione precedente.
+         </Typography>
           {renderGoalsTable()}
 
           <Divider sx={{ my: 2 }} />
@@ -884,7 +884,7 @@ const ResultsDisplay = ({ results }) => {
       
       <Box sx={{ mt: 3 }}>
         <Typography variant="body2" color="text.secondary">
-          Nota: Questa è una stima basata sui dati forniti e sulle tue preferenze di macronutrienti. Per esigenze specifiche, consulta un nutrizionista o un dietologo.
+          Nota: Questa è una stima basata sui dati forniti e sulle tue preferenze di macronutrienti. Considerala come una base di partenza! Per esigenze specifiche, consulta un nutrizionista o un dietologo.
         </Typography>
       </Box>
     </Box>
